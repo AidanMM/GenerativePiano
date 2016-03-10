@@ -5,7 +5,7 @@ var KeyboardKey = function(note){
 	Object.assign(this, {
 	playing: false,
 	note: null,
-	duration: .1,
+	duration: .2,
 	keyNumber: null,
 	playNote: function() {
 		var osc = audioCtx.createOscillator();

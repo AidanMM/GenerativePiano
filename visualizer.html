@@ -46,14 +46,14 @@
 		<br/>
 		<label>Track: 
 			<select id="trackSelect" >
-				<option value="media/17Years.mp3">17 Years</option>
-				<option value="media/XP_Sounds.mp3">XP Song</option>
-				<option value="media/Skrillex.mp3">Skrillex</option>
-				<option value="media/OneWingedAngel.mp3">One Winged Angel</option>
-				<option value="media/Lamprey.mp3">Lamprey</option>
-				<option value="media/New Adventure Theme.mp3">New Adventure Theme</option>
-				<option value="media/Peanuts Theme.mp3">Peanuts Theme</option>
-				<option value="media/The Picard Song.mp3">The Picard Song</option>
+				<option value="../../audioVisualizer/media/17Years.mp3">17 Years</option>
+				<option value="../../audioVisualizer/media/XP_Sounds.mp3">XP Song</option>
+				<option value="../../audioVisualizer/media/Skrillex.mp3">Skrillex</option>
+				<option value="../../audioVisualizer/media/OneWingedAngel.mp3">One Winged Angel</option>
+				<option value="../../audioVisualizer/media/Lamprey.mp3">Lamprey</option>
+				<option value="../../audioVisualizer/media/New Adventure Theme.mp3">New Adventure Theme</option>
+				<option value="../../audioVisualizer/media/Peanuts Theme.mp3">Peanuts Theme</option>
+				<option value="../../audioVisualizer/media/The Picard Song.mp3">The Picard Song</option>
 			</select>
 		</label>
 		<p id="status">???</p>
@@ -68,12 +68,12 @@
 	"use strict";
   	Draw.init()
    	window.onload = init;
-	var NUM_SAMPLES = 256;
+	var NUM_SAMPLES = 16384;
 	var SOUND_6 = '../../audioVisualizer/media/XP_Sounds.mp3', SOUND_4 = '../../audioVisualizer/media/New Adventure Theme.mp3', SOUND_2 = '../../audioVisualizer/media/Peanuts Theme.mp3';
 	var SOUND_3 = '../../audioVisualizer/media/The Picard Song.mp3', SOUND_5 = '../../audioVisualizer/media/Skrillex.mp3', SOUND_1 = '../../audioVisualizer/media/17Years.mp3';
 	var SOUND_7 = '../../audioVisualizer/media/OneWingedAngel.mp3', SOUND_8 = '../../audioVisualizer/media/Lamprey.mp3';
 	var audioElement;
-	var audioCtx, analyserNode, sourceNode;
+	var audioCtx2, analyserNode, sourceNode;
 	
 	var piano;
 	function init() {
@@ -91,19 +91,19 @@
 		// create new AudioContext
 		// The || is because WebAudio has not been standardized across browsers yet
 		// http://webaudio.github.io/web-audio-api/#the-audiocontext-interface
-		audioCtx = new (window.AudioContext || window.webkitAudioContext);
+		audioCtx2 = new (window.AudioContext || window.webkitAudioContext);
 			
 		// create an analyser node
-		analyserNode = audioCtx.createAnalyser();
+		analyserNode = audioCtx2.createAnalyser();
 			
 		// fft stands for Fast Fourier Transform
 		analyserNode.fftSize = NUM_SAMPLES;
 			
 		// this is where we hook up the <audio> element to the analyserNode
-		sourceNode = audioCtx.createMediaElementSource(audioElement); 
+		sourceNode = audioCtx2.createMediaElementSource(audioElement); 
 		sourceNode.connect(analyserNode);
 		
-		analyserNode.connect(audioCtx.destination);
+		//analyserNode.connect(audioCtx2.destination);
 			
 		return analyserNode;
 	}
@@ -119,19 +119,32 @@
 		document.querySelector('#status').innerHTML = "Now playing: " + path;
 	}
 	function update() {
-		requestAnimationFrame(update);
 		piano.draw();
+		var delay = 1;
+		setTimeout(function() {
+		requestAnimationFrame(update);
 		// create a new array of 8-bit integers (0-255)
 		var data = new Uint8Array(NUM_SAMPLES); 
 		
 		// populate the array with the frequency data
 		// notice these arrays can be passed "by reference" 
-		analyserNode.getByteFrequencyData(data);
+		analyserNode.getByteTimeDomainData(data);
 		
+		for(var  i = 0; i < piano.keyboardKeys.length - 10; i++) {
+			var bin = 21050 / NUM_SAMPLES;
+			bin *= piano.keyboardKeys[i].note;
 			
-		for(var i=0; i<NUM_SAMPLES / 4; i++) { 
+			var value = data[Math.round(bin)];
+
+			if(value > 135) {
+				piano.keyboardKeys[i].playNote();
+			}
+		}			
+
+		//for(var i=0; i<NUM_SAMPLES / 4; i++) { 
 			
-		}
+		//}
+		}, delay);
 	}	
   }());
 
