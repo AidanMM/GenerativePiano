@@ -1,0 +1,140 @@
+<html>
+  <head>
+  <title>Visualizer</title>
+  <link href='https://fonts.googleapis.com/css?family=Orbitron:900' rel='stylesheet' type='text/css'>
+    <style>
+	body {
+        background: #000000;
+         font-family: tahoma, verdana, sans serif;
+		
+		margin: 0 0 0 0;
+	}
+	
+	h1
+	{
+		font-family: 'Orbitron' , sans-serif;
+		text-align: center;
+		color: #ffffff;
+	}
+	div{
+		text-align:center;	
+		color: #ffffff;
+	}
+	controls{
+		margin-left:10px;
+		margin-top:10px;
+	}
+	canvas{
+		background: gray;
+		padding-left: 0;
+		padding-right: 0;
+		margin-left: auto;
+		margin-right: auto;
+		display: block;
+	}
+	  
+
+    </style>
+	
+  </head>
+
+  <body>
+  <h1>Visualizer</h1>
+    <canvas></canvas>
+	<div id="controls">
+		<audio controls loop></audio>
+		<br/>
+		<label>Track: 
+			<select id="trackSelect" >
+				<option value="media/17Years.mp3">17 Years</option>
+				<option value="media/XP_Sounds.mp3">XP Song</option>
+				<option value="media/Skrillex.mp3">Skrillex</option>
+				<option value="media/OneWingedAngel.mp3">One Winged Angel</option>
+				<option value="media/Lamprey.mp3">Lamprey</option>
+				<option value="media/New Adventure Theme.mp3">New Adventure Theme</option>
+				<option value="media/Peanuts Theme.mp3">Peanuts Theme</option>
+				<option value="media/The Picard Song.mp3">The Picard Song</option>
+			</select>
+		</label>
+		<p id="status">???</p>
+	</div>
+	
+  </body>
+  
+  <script src='setup.js'></script>
+  <script src='piano.js'></script>
+  <script>
+  (function(){
+	"use strict";
+  	Draw.init()
+   	window.onload = init;
+	var NUM_SAMPLES = 256;
+	var SOUND_6 = '../../audioVisualizer/media/XP_Sounds.mp3', SOUND_4 = '../../audioVisualizer/media/New Adventure Theme.mp3', SOUND_2 = '../../audioVisualizer/media/Peanuts Theme.mp3';
+	var SOUND_3 = '../../audioVisualizer/media/The Picard Song.mp3', SOUND_5 = '../../audioVisualizer/media/Skrillex.mp3', SOUND_1 = '../../audioVisualizer/media/17Years.mp3';
+	var SOUND_7 = '../../audioVisualizer/media/OneWingedAngel.mp3', SOUND_8 = '../../audioVisualizer/media/Lamprey.mp3';
+	var audioElement;
+	var audioCtx, analyserNode, sourceNode;
+	
+	var piano;
+	function init() {
+		piano = new Piano(Draw.ctx, 0, Draw.canvas.height / 3, Draw.canvas.width, Draw.canvas.height / 3);
+	
+		// Initialize audio systems
+		audioElement = document.querySelector('audio');
+		analyserNode = createWebAudioContextWithAnalyserNode(audioElement);
+		setupUI();
+		playStream(audioElement,SOUND_1);
+		update();
+	}
+	
+	function createWebAudioContextWithAnalyserNode(audioElement) {
+		// create new AudioContext
+		// The || is because WebAudio has not been standardized across browsers yet
+		// http://webaudio.github.io/web-audio-api/#the-audiocontext-interface
+		audioCtx = new (window.AudioContext || window.webkitAudioContext);
+			
+		// create an analyser node
+		analyserNode = audioCtx.createAnalyser();
+			
+		// fft stands for Fast Fourier Transform
+		analyserNode.fftSize = NUM_SAMPLES;
+			
+		// this is where we hook up the <audio> element to the analyserNode
+		sourceNode = audioCtx.createMediaElementSource(audioElement); 
+		sourceNode.connect(analyserNode);
+		
+		analyserNode.connect(audioCtx.destination);
+			
+		return analyserNode;
+	}
+	function setupUI() {
+		document.querySelector("#trackSelect").onchange = function(e) {
+			playStream(audioElement,e.target.value);
+		};
+	}
+	function playStream(audioElement,path) {
+		audioElement.src = path;
+		audioElement.play();
+		audioElement.volume = 0.2;
+		document.querySelector('#status').innerHTML = "Now playing: " + path;
+	}
+	function update() {
+		requestAnimationFrame(update);
+		piano.draw();
+		// create a new array of 8-bit integers (0-255)
+		var data = new Uint8Array(NUM_SAMPLES); 
+		
+		// populate the array with the frequency data
+		// notice these arrays can be passed "by reference" 
+		analyserNode.getByteFrequencyData(data);
+		
+			
+		for(var i=0; i<NUM_SAMPLES / 4; i++) { 
+			
+		}
+	}	
+  }());
+
+  </script>
+
+</html>
