@@ -3,35 +3,83 @@ var waveType = 'square';
 
 var KeyboardKey = function(note){
 	Object.assign(this, {
-	playing: false,
-	note: null,
-	duration: .2,
-	keyNumber: null,
-	playNote: function() {
-		var osc = audioCtx.createOscillator();
-			osc.type = waveType;
-			osc.frequency.value = this.note;
-			
-			var gainNode = audioCtx.createGain()
-			gainNode.gain.setValueAtTime( 0, audioCtx.currentTime )
-			gainNode.gain.linearRampToValueAtTime( .3, audioCtx.currentTime + this.duration )
-			gainNode.gain.linearRampToValueAtTime( 0, audioCtx.currentTime + this.duration + this.duration / 5.0 )
-			
-			osc.connect(gainNode);
-			gainNode.connect(audioCtx.destination);
-			
-			osc.start();
-			this.playing = true;
-			var playing = this.playing;
-			osc.stop(audioCtx.currentTime + this.duration + this.duration / 5.0);
-			osc.owner = this;
-			osc.onended = function(){ 
-				osc.owner.playing = false;
-			};
-	}
+		playing: false,
+		note: null,
+		duration: .31,
+		keyNumber: null,
+		playNote: function() {
+			var osc = audioCtx.createOscillator();
+				osc.type = waveType;
+				osc.frequency.value = this.note;
+				
+				var gainNode = audioCtx.createGain()
+				gainNode.gain.setValueAtTime( 0, audioCtx.currentTime )
+				gainNode.gain.linearRampToValueAtTime( .3, audioCtx.currentTime + this.duration )
+				gainNode.gain.linearRampToValueAtTime( 0, audioCtx.currentTime + this.duration + this.duration / 5.0 )
+				
+				osc.connect(gainNode);
+				gainNode.connect(audioCtx.destination);
+				
+				osc.start();
+				this.playing = true;
+				var playing = this.playing;
+				osc.stop(audioCtx.currentTime + this.duration + this.duration / 5.0);
+				osc.owner = this;
+				osc.onended = function(){ 
+					osc.owner.playing = false;
+				};
+		}
 	});
 	
 	this.note = note;
+}
+
+var automota = function(size) {
+	Object.assign(this, {
+		automota: [],
+		nextState: [],
+		update: function() {
+			
+			//Actual automota.  If neighbor cell is alive, become alive.
+			//If Alive, Die
+			for(var i = 0; i < this.automota.length; i++) {
+				if(this.automota[i] == 1) {
+					this.nextState[i] = 0;
+					continue;
+				}
+				if(i > 0) {
+					if( this.automota[i - 1] == 1) {
+						this.nextState[i] = 1;
+						continue;
+					}
+				}
+				if(i < this.automota.length - 1) {
+					if(this.automota[i + 1] == 1) {
+						this.nextState[i] = 1;
+						continue;
+					}
+				}
+			}
+			
+			for(var i = 0; i < this.automota.length; i++) {
+				this.automota[i] = this.nextState[i];
+			}
+		},
+		
+		clearState: function() {
+			for(var i = 0; i < this.automota.length; i++) {
+				this.automota[i] = 0;
+				this.nextState[i] = 0;
+			}
+		}
+	});
+	
+	this.automota = new Array();
+	this.nextState = new Array();
+	for(var i = 0; i < size; i++) {
+		this.automota.push(0);
+		this.nextState.push(0);
+	}
 }
 
 var Piano = function(ctx, xPos, yPos, width, height){
@@ -39,8 +87,12 @@ var Piano = function(ctx, xPos, yPos, width, height){
 		key: null,
 		chords: [],
 		allowedNotes: [],
+		noteQueue: [],
 		whiteKeys: 52,
 		blackKeys: 36,
+		timer: 0,
+		sixteenth: 31,
+		nextPlayTime: 31,
 		drawData: {
 			width: 0,
 			height: 0,
@@ -51,8 +103,11 @@ var Piano = function(ctx, xPos, yPos, width, height){
 		draw: function() {
 			var whiteKeyWidth = this.drawData.width / this.whiteKeys;
 			var blackKeyWidth = whiteKeyWidth / 1.5;
-			var blackKeyHeight = this.drawData.height / 3.0 * 2.0;
+			var blackKeyHeight = this.drawData.height / 3.0 * 2.0 / 2.0;
 			var keyIter = this.whiteKeys - 1;
+			this.drawData.ctx.strokeStyle = "rgb(150,150,150)";
+			this.drawData.ctx.strokeRect(this.drawData.xPos, this.drawData.yPos, this.drawData.width, this.drawData.height / 2);
+			this.drawData.ctx.strokeStyle = "rgb(0,0,0)";
 			for(var i = 0; i < this.keyboardKeys.length; i++) {
 				
 				//Check if a black key or white key
@@ -65,8 +120,8 @@ var Piano = function(ctx, xPos, yPos, width, height){
 				} else {
 					this.drawData.ctx.fillStyle = "rgb(255,255,255)";
 				}
-				this.drawData.ctx.fillRect(this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height);
-				this.drawData.ctx.strokeRect(this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height);
+				this.drawData.ctx.fillRect(this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height / 2);
+				this.drawData.ctx.strokeRect(this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height / 2);
 				
 				keyIter--;
 			}
@@ -88,6 +143,44 @@ var Piano = function(ctx, xPos, yPos, width, height){
 				
 				keyIter--;
 			}
+			
+			//this.clef.draw(this.drawData);
+		},
+		update: function(){
+			this.timer++;
+			if(this.timer % this.nextPlayTime == 0) {
+				var rand = Math.random() * 3;
+				this.nextPlayTime = (this.sixteenth * Math.floor(rand + 1));
+				this.playNotesInQueueDuration(Math.floor(rand + 1));
+				
+				if(Math.random() > .8 && this.noteQueue.length > 0) {
+					this.playNotesInQueue();
+				}
+			}
+		},
+		addNotesToQueue: function(notes){
+			this.noteQueue.push(notes);
+		},
+		playNotesInQueue: function(){
+			if(this.noteQueue.length <= 0) return;
+			
+			for(var i = 0; i < this.noteQueue[0].length; i++) {
+				if(this.noteQueue[0][i] != null) {
+					this.noteQueue[0][i].playNote();
+				}
+			}
+			this.noteQueue.shift();
+		},
+		playNotesInQueueDuration: function(duration){
+			if(this.noteQueue.length <= 0) return;
+			
+			for(var i = 0; i < this.noteQueue[0].length; i++) {
+				if(this.noteQueue[0][i] != null) {
+					this.noteQueue[0][i].duration = .31 * duration;
+					this.noteQueue[0][i].playNote();
+				}
+			}
+			this.noteQueue.shift();
 		},
 		playNote: function(keyboardKey) {
 			keyboardKey.playNote();
@@ -166,15 +259,6 @@ var Piano = function(ctx, xPos, yPos, width, height){
 			for(var i = 0; i < this.allowedNotes.length; i++) {
 				this.chords[i] = this.gen7thInCurrentKey(this.keyboardKeys[this.allowedNotes[i]]);
 			}
-			
-			/*this.chords[0] = this.gen7thInCurrentKey(s.n1);
-			this.chords[1] = this.gen7thInCurrentKey(s.n2);
-			this.chords[2] = this.gen7thInCurrentKey(s.n3);
-			this.chords[3] = this.gen7thInCurrentKey(s.n4);
-			this.chords[4] = this.gen7thInCurrentKey(s.n5);
-			this.chords[5] = this.gen7thInCurrentKey(s.n6);
-			this.chords[6] = this.gen7thInCurrentKey(s.n7);
-			this.chords[7] = this.gen7thInCurrentKey(s.n8);*/
 			
 			return this.chords;
 		},
@@ -258,6 +342,11 @@ var Piano = function(ctx, xPos, yPos, width, height){
 		},
 		genScale: function(keyboardKey) {
 			var s = {};
+			if(keyboardKey.keyNumber < 12){
+				keyboardKey.keyNumber += 12;
+			} else if(keyboardKey.keyNumber > 66){
+				keyboardKey.keyNumber -= 12;
+			}
 			s.n1 = keyboardKey;
 			s.n2 = this.keyboardKeys[keyboardKey.keyNumber - 2];
 			s.n3 = this.keyboardKeys[keyboardKey.keyNumber - 4];
@@ -310,7 +399,7 @@ var Piano = function(ctx, xPos, yPos, width, height){
 			var mouse = getMouse(e);
 			var whiteKeyWidth = this.drawData.width / this.whiteKeys;
 			var blackKeyWidth = whiteKeyWidth / 1.5;
-			var blackKeyHeight = this.drawData.height / 3.0 * 2.0;
+			var blackKeyHeight = this.drawData.height / 3.0;
 			var keyIter = this.whiteKeys - 1;
 			for(i = 0; i < this.keyboardKeys.length; i++) {
 				var baseKey = i % 12;
@@ -327,12 +416,12 @@ var Piano = function(ctx, xPos, yPos, width, height){
 			}
 			
 			keyIter = this.whiteKeys - 1;
-			for(var i = 0; i < this.keyboardKeys.length; i++) {
+			for(var i = 0; i < this.keyboardKeys.length; i++) {	
 				var baseKey = i % 12;
 				if(baseKey == 2 || baseKey == 4 || baseKey == 6 || baseKey == 9 || baseKey == 11 ) {
 					continue;
 				}
-				if(withinRectangle(mouse.x, mouse.y, this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height)){
+				if(withinRectangle(mouse.x, mouse.y, this.drawData.xPos + whiteKeyWidth * keyIter, this.drawData.yPos, whiteKeyWidth, this.drawData.height / 2)){
 					this.arpeggio(this.genMajor7th(this.keyboardKeys[i]), 100, .1);
 					return;
 				}
@@ -441,6 +530,24 @@ var Piano = function(ctx, xPos, yPos, width, height){
 			
 		},
 		keyboardKeys: [],
+		
+		clef: {
+			draw: function(drawData) {
+				drawData.ctx.strokeStyle = "rgb(255,255,255)";
+				drawData.ctx.strokeWidth = .1;
+				var yOffset = Math.round(drawData.yPos + drawData.height / 2);
+				var lineOffset = Math.round(drawData.height / 2 / 55);
+				for(var i = 16;i < 31; i ++) {
+					//if( i < 5 || i > 10) {
+						drawData.ctx.beginPath();
+						var y = Math.round(yOffset + lineOffset * (i));
+						drawData.ctx.moveTo(drawData.xPos, y);
+						drawData.ctx.lineTo(drawData.xPos + drawData.width, y);
+						drawData.ctx.stroke();
+					//}
+				}
+			}
+		}
 	});
 	
 	this.keyboardKeys = [
@@ -647,6 +754,7 @@ var Piano = function(ctx, xPos, yPos, width, height){
 	this.drawData.yPos = yPos;
 	this.drawData.width = width;
 	this.drawData.height = height;
+	this.noteQueue = new Array();
 }
 
 function getMouse(e){

@@ -3,7 +3,7 @@
   <head>
     <style>
       body { margin:0; padding:0 }
-	  canvas {background-color: blue;}
+	  canvas {background-color: black;}
 	  </style>
   </head>
 
@@ -18,99 +18,59 @@
   	Draw.init()
    	this.onload = init;
 	var piano;
+	var algorithm;
     
 	function init() {
-		piano = new Piano(Draw.ctx, 0, Draw.canvas.height / 3, Draw.canvas.width, Draw.canvas.height / 3);
+		piano = new Piano(Draw.ctx, 0, 0, Draw.canvas.width, Draw.canvas.height);
 		Draw.canvas.onmousedown = piano.doMouseDown.bind(piano);
-		/*var first = piano.genMajorTriad(piano.note.c4);
-		var second = piano.genMinorTriad(piano.note.d4);
-		var third = piano.genMinorTriad(piano.note.e4)
-		var fourth = piano.genMajorTriad(piano.note.f4);
-		var fifth = piano.genMajorTriad(piano.note.g4);
-		var sixth = piano.genMinorTriad(piano.note.a4);
-		var seventh = piano.genDiminishedTriad(piano.note.b4);
-		var eighth = piano.genMajorTriad(piano.note.c5);
-		setTimeout(function(){piano.playTriad(first)}, 0);
-		setTimeout(function(){piano.playTriad(second)},1000);
-		setTimeout(function(){piano.playTriad(third)},2000);
-		setTimeout(function(){piano.playTriad(fourth)},3000);
-		setTimeout(function(){piano.playTriad(fifth)},4000);
-		setTimeout(function(){piano.playTriad(sixth)},5000);
-		setTimeout(function(){piano.playTriad(seventh)},6000);
-		setTimeout(function(){piano.playTriad(eighth)},7000);*/
-		//piano.playScale(piano.genScale(piano.note.c4), 1000);
-		
-		//piano.playTriad(first);
-		/*piano.playNote(piano.note.c4);
-		piano.playNote(piano.note.ds5);
-		piano.playNote(piano.note.g5);
-		
-		piano.playNote(piano.note.c4);
-		piano.playNote(piano.note.e4);
-		piano.playNote(piano.note.g5); */
-		
-		piano.genChords(piano.note.as4);
-		//piano.note.c4.duration = 2;
-		//piano.playChords(1000);
-		for(var i = 0; i < piano.chords.length - 4; i++) {
-			(function(chordIndex){ 
-			setTimeout(function(){
-			piano.arpeggio(piano.chords[chordIndex], 100, .1);
-			}, i * 200);
-			})(piano.chords.length - i);
-		}
-		piano.genChords(piano.note.a4);
-		for(var i = 0; i < piano.chords.length - 4; i++) {
-			(function(chordIndex){ 
-			setTimeout(function(){
-			piano.reverseArpeggio(piano.chords[chordIndex], 100, .1);
-			}, i * 200);
-			})(i + 4);
-		}
-		/*for(var i = 0; i < piano.chords.length - 4; i++) {
-			(function(chordIndex){ 
-			setTimeout(function(){
-			piano.play7th(piano.chords[chordIndex]);
-			}, i * 200);
-			})(piano.chords.length - i);
-		}
-		for(var i = 0; i < piano.chords.length - 4; i++) {
-			(function(chordIndex){ 
-			setTimeout(function(){
-			piano.play7th(piano.chords[chordIndex]);
-			}, i * 200);
-			})(i + 4);
-		}*/
-		/*setTimeout(function(){piano.arpeggio(piano.chords[14], 200, .2)},0);
-		setTimeout(function(){piano.arpeggio(piano.chords[15], 200, .2)},800);
-		setTimeout(function(){piano.arpeggio(piano.chords[16], 200, .2)},1600);
-		setTimeout(function(){piano.arpeggio(piano.chords[17], 200, .2)},2400);
-		setTimeout(function(){piano.arpeggio(piano.chords[18], 200, .2)},3200);
-		setTimeout(function(){piano.arpeggio(piano.chords[19], 200, .2)},4000);
-		setTimeout(function(){piano.arpeggio(piano.chords[20], 200, .2)},4800);
-		setTimeout(function(){piano.arpeggio(piano.chords[21], 200, .2)},5600);
-		setTimeout(function(){piano.arpeggio(piano.chords[22], 200, .2)},6400);
-		setTimeout(function(){piano.reverseArpeggio(piano.chords[22], 200, .2)},7200);
-		setTimeout(function(){ 
-			piano.setChordDuration(piano.chords[22], 1.0);
-			piano.play7th(piano.chords[22])
-		},8000);*/
-		
-		//musicStuff();
+		piano.genChords(piano.note.c4);
+		algorithm = new automota(88);
+		algorithm.automota[44] = 1;
 		update();
 	}
 	function update() {
-		
 		requestAnimationFrame(update);	
 		piano.draw();
+		piano.update();
+		if(piano.timer % piano.sixteenth == 0) {
+			algorithm.update();
+			var notesArray = new Array();
+			for(var i = 0; i < 88; i++) {
+				if(algorithm.automota[i] == 1 && piano.validateNoteInCurrentKey(piano.keyboardKeys[i])) {
+					var rand = Math.random();
+					if(rand > .8) {
+						notesArray.push(piano.keyboardKeys[i]);
+					} else if (rand > .6) {
+						var chord = piano.gen7thInCurrentKey(piano.keyboardKeys[i]);
+						notesArray.push(chord.n1);
+						notesArray.push(chord.n2);
+						
+						piano.addNotesToQueue([chord.n3, chord.n4]);
+					} else if (rand > .4) {
+						var chord = piano.gen7thInCurrentKey(piano.keyboardKeys[i]);
+						notesArray.push(chord.n1);
+						notesArray.push(chord.n2);
+						notesArray.push(chord.n3);
+						notesArray.push(chord.n4);
+					} else  if ( rand > .2 ) {
+						i += 12;
+					}
+					else {
+						continue;
+					}
+					if(i > 70 || i < 10) 
+					{
+						algorithm.clearState();
+						algorithm.automota[ i > 70 ? 30 : 50] = 1;
+						piano.genChords(piano.keyboardKeys[i]);
+						piano.noteQueue = new Array();
+					}
+					break;
+				}
+			}
+			piano.addNotesToQueue(notesArray);
+		}
 	}
-	function musicStuff() {
-		setTimeout(function(){
-			piano.arpeggio(piano.chords[Math.round(Math.random() * piano.chords.length)], Math.random() * 400, Math.random() * .4);
-			musicStuff();
-		}, Math.random() * 1000);
-	}
-	
   }());
 
   </script>
