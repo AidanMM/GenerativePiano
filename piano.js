@@ -91,8 +91,8 @@ var Piano = function(ctx, xPos, yPos, width, height){
 		whiteKeys: 52,
 		blackKeys: 36,
 		timer: 0,
-		sixteenth: 31,
-		nextPlayTime: 31,
+		sixteenth: 30,
+		nextPlayTime: 30,
 		drawData: {
 			width: 0,
 			height: 0,
@@ -153,7 +153,12 @@ var Piano = function(ctx, xPos, yPos, width, height){
 				this.nextPlayTime = (this.sixteenth * Math.floor(rand + 1));
 				this.playNotesInQueueDuration(Math.floor(rand + 1));
 				
-				if(Math.random() > .8 && this.noteQueue.length > 0) {
+				if(Math.random() > .8 && this.noteQueue.length > 1) {
+					this.noteQueue.shift();
+					
+					if(this.noteQueue.length > 2) {
+						this.noteQueue.shift();
+					}
 					this.playNotesInQueue();
 				}
 			}

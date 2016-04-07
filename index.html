@@ -19,6 +19,8 @@
    	this.onload = init;
 	var piano;
 	var algorithm;
+	
+	var singleNoteFrequency, semiChordFrequency, triadFrequency, downOctaveFrequency;
     
 	function init() {
 		piano = new Piano(Draw.ctx, 0, 0, Draw.canvas.width, Draw.canvas.height);
@@ -26,6 +28,7 @@
 		piano.genChords(piano.note.c4);
 		algorithm = new automota(88);
 		algorithm.automota[44] = 1;
+		singleNoteMain();
 		update();
 	}
 	function update() {
@@ -38,21 +41,21 @@
 			for(var i = 0; i < 88; i++) {
 				if(algorithm.automota[i] == 1 && piano.validateNoteInCurrentKey(piano.keyboardKeys[i])) {
 					var rand = Math.random();
-					if(rand > .8) {
+					if(rand > singleNoteFrequency) {
 						notesArray.push(piano.keyboardKeys[i]);
-					} else if (rand > .6) {
+					} else if (rand > semiChordFrequency) {
 						var chord = piano.gen7thInCurrentKey(piano.keyboardKeys[i]);
 						notesArray.push(chord.n1);
 						notesArray.push(chord.n2);
 						
 						piano.addNotesToQueue([chord.n3, chord.n4]);
-					} else if (rand > .4) {
+					} else if (rand > triadFrequency) {
 						var chord = piano.gen7thInCurrentKey(piano.keyboardKeys[i]);
 						notesArray.push(chord.n1);
 						notesArray.push(chord.n2);
 						notesArray.push(chord.n3);
-						notesArray.push(chord.n4);
-					} else  if ( rand > .2 ) {
+						//notesArray.push(chord.n4);
+					} else  if ( rand > downOctaveFrequency ) {
 						i += 12;
 					}
 					else {
@@ -61,7 +64,7 @@
 					if(i > 70 || i < 10) 
 					{
 						algorithm.clearState();
-						algorithm.automota[ i > 70 ? 30 : 50] = 1;
+						algorithm.automota[ i > 70 ? 20 : 50] = 1;
 						piano.genChords(piano.keyboardKeys[i]);
 						piano.noteQueue = new Array();
 					}
@@ -70,6 +73,18 @@
 			}
 			piano.addNotesToQueue(notesArray);
 		}
+	}
+	function singleNoteMain() {
+		singleNoteFrequency = .35;
+		semiChordFrequency = .25;
+		triadFrequency = .15;
+		downOctaveFrequency = .5;
+	}
+	function balanced() {
+		singleNoteFrequency = .5;
+		semiChordFrequency = .4;
+		triadFrequency = .3;
+		downOctaveFrequency = .2;
 	}
   }());
 
